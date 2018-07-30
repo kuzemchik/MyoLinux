@@ -67,6 +67,13 @@ void Client::enable_notifications()
     }
 }
 
+void Client::enable_indications()
+{
+    for (const auto &descriptor : indicated_descriptors) {
+         client.writeAttribute(descriptor, gatt::indications::enable);
+    }
+}
+
 /** \copybrief gatt::Client::connect
  *
  *  Reviving the connection is only possible if no data has been sent i.e. setMode has not yet been called, otherwise
@@ -79,6 +86,7 @@ void Client::connect(const Address &address)
 {
     client.connect(address);
     enable_notifications();
+    enable_indications();
 }
 
 /// \copydoc gatt::Client::connect(const std::string &str)
@@ -86,6 +94,7 @@ void Client::connect(const std::string &str)
 {
     client.connect(str);
     enable_notifications();
+    enable_indications();
 }
 
 /** Auto-connect the client to the first device.
@@ -118,6 +127,9 @@ void Client::disconnect()
     for (const auto &descriptor : event_descriptors) {
          client.writeAttribute(descriptor, gatt::notifications::disable);
     }
+    for (const auto &descriptor : indicated_descriptors) {
+         client.writeAttribute(descriptor, gatt::indications::disable);
+    }
     client.disconnect();
 }
 
@@ -142,6 +154,20 @@ void Client::vibrate(const Vibration vibration_type)
     command<CommandVibrate>(client, static_cast<std::uint8_t>(vibration_type));
 }
 
+/** Enter DeepSleep mode. */
+void Client::deepSleep()
+{
+    command<CommandDeepSleep>(client);
+}
+
+/** Vibrate2, extended vibration command.
+ *  \param duration (in ms)
+ *  \param strength (0 - motor off, 255 - full speed) */
+void Client::vibrate2(const std::uint16_t duration, const std::uint8_t strength)
+{
+    command<CommandVibrate2>(client, duration, strength);
+}
+
 /** Set the EMG and IMU modes.
  *  \param emg_mode EMG mode
  *  \param imu_mode IMU mode
@@ -160,6 +186,21 @@ void Client::setMode(const EmgMode emg_mode, const ImuMode imu_mode, const Class
 void Client::setSleepMode(const SleepMode sleep_mode)
 {
     command<CommandSetSleepMode>(client, static_cast<std::uint8_t>(sleep_mode));
+}
+
+/** Unlock Myo
+ *  Can also be used to Myo re-lock.
+ *  \param unlock_mode unlock mode */
+void Client::unlock(const UnlockMode unlock_mode)
+{
+    command<CommandUnlock>(client, static_cast<std::uint8_t>(unlock_mode));
+}
+
+/** Re-lock Myo
+  * Same as Client::unlock(UnlockMode::Lock) */
+void Client::lock()
+{
+    command<CommandUnlock>(client, static_cast<std::uint8_t>(UnlockMode::Lock));
 }
 
 /** Read the device name.
@@ -186,6 +227,22 @@ void Client::onEmg(const std::function<void(EmgSample)> &callback)
 void Client::onImu(const std::function<void(OrientationSample, AccelerometerSample, GyroscopeSample)> &callback)
 {
     imu_callback = callback;
+}
+
+/** Set the callback for the classifier event.
+ *  \param callback
+ */
+void Client::onClassifierEvent(const std::function<void(ClassifierEvent)> &callback)
+{
+    classifier_callback = callback;
+}
+
+/** Set the callback for the IMU motion event.
+ *  \param callback
+ */
+void Client::onMotionEvent(const std::function<void(MotionEvent)> &callback)
+{
+    motion_callback = callback;
 }
 
 /** Wait for the value event and call the appropriate callback.
@@ -228,6 +285,16 @@ void Client::listen()
                       std::begin(gyroscope_sample));
 
             imu_callback(std::move(orientation_sample), std::move(accelerometer_sample), std::move(gyroscope_sample));
+        }
+        else if (classifier_callback && handle == ClassifierEventCharacteristic) {
+            const auto data = unpack<ClassifierEvent>(payload);
+
+            classifier_callback(std::move(data));
+        }
+        else if (motion_callback && handle == MotionEventCharacteristic) {
+            const auto data = unpack<MotionEvent>(payload);
+
+            motion_callback(std::move(data));
         }
     });
 }

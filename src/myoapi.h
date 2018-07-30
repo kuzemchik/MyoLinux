@@ -83,6 +83,13 @@ enum class SleepMode {
     NeverSleep = 1, ///< Never go to sleep.
 };
 
+/// Unlock modes.
+enum class UnlockMode {
+    Lock  = 0x00, ///< Re-lock immediately.
+    Timed = 0x01, ///< Unlock now and re-lock after a fixed timeout.
+    Hold  = 0x02, ///< Unlock now and remain unlocked until a lock command is received.
+};
+
 /// Kinds of vibrations.
 enum class Vibration {
     None   = 0x00, ///< Do not vibrate.
@@ -113,6 +120,84 @@ struct PACKED FwVersion {
     uint16_t minor;
     uint16_t patch;
     uint16_t hardware_rev; ///< Myo hardware revision. See myohw_hardware_rev_t.
+};
+
+/// Types of motion events.
+enum class MotionEventType: std::uint8_t {
+    Tap = 0x00
+};
+
+/// Motion event data received in a myohw_att_handle_motion_event attribute.
+struct PACKED MotionEvent {
+    MotionEventType type; /// Type type of motion event that occurred. See myohw_motion_event_type_t.
+    /// Event-specific data.
+    union PACKED {
+        /// For myohw_motion_event_tap events.
+        struct PACKED {
+            uint8_t tap_direction;
+            uint8_t tap_count;
+        };
+    };
+};
+
+/// Types of classifier events.
+enum class ClassifierEventType: std::uint8_t {
+    ArmSynced   = 0x01,
+    ArmUnsynced = 0x02,
+    Pose        = 0x03,
+    Unlocked    = 0x04,
+    Locked      = 0x05,
+    SyncFailed  = 0x06
+};
+
+/// Enumeration identifying a right arm or left arm.
+enum class Arm: std::uint8_t {
+    Right   = 0x01,
+    Left    = 0x02,
+    Unknown = 0xff
+};
+
+/// Possible directions for Myo's +x axis relative to a user's arm.
+enum class XDirection: std::uint8_t {
+    TowardsWrist = 0x01,
+    TowardsElbow = 0x02,
+    Unknown      = 0xff
+};
+
+/// Supported poses.
+enum class Pose: std::uint16_t {
+    Rest          = 0x0000,
+    Fist          = 0x0001,
+    WaveIn        = 0x0002,
+    WaveOut       = 0x0003,
+    FingersSpread = 0x0004,
+    DoubleTap     = 0x0005,
+    Unknown       = 0xffff
+};
+
+/// Possible outcomes when the user attempts a sync gesture.
+enum class SyncResult {
+    TooHard     = 0x01 ///< Sync geture was performed too hard
+};
+
+/// Classifier event data received in a myohw_att_handle_classifier_event attribute.
+struct PACKED ClassifierEvent {
+    ClassifierEventType type; ///< See myohw_classifier_event_type_t
+
+    /// Event-specific data
+    union PACKED {
+        /// For myohw_classifier_event_arm_synced events.
+        struct PACKED {
+            Arm arm; ///< See myohw_arm_t
+            XDirection x_direction; ///< See myohw_x_direction_t
+        };
+
+        /// For myohw_classifier_event_pose events.
+        Pose pose; ///< See myohw_pose_t
+
+        /// For myohw_classifier_event_sync_failed events.
+        SyncResult sync_result; ///< See myohw_sync_result_t.
+    };
 };
 
 /// EmgSample
