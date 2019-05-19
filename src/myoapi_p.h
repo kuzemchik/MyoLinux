@@ -45,17 +45,19 @@ namespace myo {
 // using the bluetoothctl tool. The descriptors are listed under the appropriate characteristics.
 enum {
     //ControlService
-    MyoInfoCharacteristic         = 0x0,
+    MyoInfoCharacteristic         = 0x15, // Read-only attribute
     FirmwareVersionCharacteristic = 0x17,
     CommandCharacteristic         = 0x19,
 
     //ImuDataService
     IMUDataCharacteristic         = 0x1c,
     IMUDataDescriptor             = 0x1d,
-    //MotionEventCharacteristic   = 0x0,
+    MotionEventCharacteristic     = 0x1f, // Indicate-only
+    MotionEventDescriptor         = 0x20,
 
     //ClssifierService
-    //ClassifierEventCharacteristic = 0x0,
+    ClassifierEventCharacteristic = 0x23, // Indicate-only
+    ClassifierEventDescriptor     = 0x24,
 
     //EmgDataService
     EmgData0Characteristic        = 0x2b,
@@ -68,9 +70,9 @@ enum {
     EmgData3Descriptor            = 0x35,
 
     //BatteryService
-    //BatteryLevelCharacteristic  = 0x0,
+    BatteryLevelCharacteristic    = 0x11, // Read / Notify
 
-    DeviceName                    = 0x3,
+    DeviceName                    = 0x03,
 };
 
 namespace {
@@ -80,6 +82,11 @@ const auto event_descriptors = {
     EmgData1Descriptor,
     EmgData2Descriptor,
     EmgData3Descriptor
+};
+
+const auto indicated_descriptors = {
+    MotionEventDescriptor,
+    ClassifierEventDescriptor
 };
 }
 
@@ -105,11 +112,35 @@ struct PACKED CommandVibrate {
     uint8_t type;         ///< See myohw_vibration_type_t.
 };
 
+/// DeepSleep command.
+struct PACKED CommandDeepSleep {
+    enum { cmd = 0x04 };
+    CommandHeader header; ///< command == myohw_command_deep_sleep. payload_size == 0.
+};
+
+/// Extended vibration command.
+constexpr uint8_t Vibrate2_Steps = 6;
+struct PACKED CommandVibrate2 {
+    enum { cmd = 0x07 };
+    CommandHeader header; ///< command == myohw_command_vibrate. payload_size == 18.
+    struct PACKED {
+        uint16_t duration;///< duration (in ms) of the vibration
+        uint8_t strength; ///< strength of vibration (0 - motor off, 255 - full speed)
+    } steps[Vibrate2_Steps];
+};
+
 /// Sleep modes.
 struct PACKED CommandSetSleepMode {
     enum { cmd = 0x09 };
     CommandHeader header; ///< command == myohw_command_set_sleep_mode. payload_size == 1.
     uint8_t sleep_mode;   ///< Sleep mode. See myohw_sleep_mode_t.
+};
+
+/// Unlock Myo.
+struct PACKED CommandUnlock {
+    enum {cmd = 0x0a };
+    CommandHeader header; ///< command == myohw_command_unlock. payload_size == 1.
+    uint8_t type;         ///< Unlock type. See myohw_unlock_type_t.
 };
 
 /// Raw EMG data received form the device

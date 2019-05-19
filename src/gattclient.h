@@ -22,7 +22,12 @@ namespace MYOLINUX_NAMESPACE {
 namespace gatt {
 
 namespace notifications {
-const Buffer enable{0x1, 0x0};
+const Buffer enable{0x01, 0x0};
+const Buffer disable{0x0, 0x0};
+}
+
+namespace indications {
+const Buffer enable{0x02, 0x0};
 const Buffer disable{0x0, 0x0};
 }
 

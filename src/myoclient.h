@@ -50,21 +50,30 @@ public:
     FwVersion firmwareVersion();
 
     void vibrate(const Vibration);
+    void deepSleep();
+    void vibrate2(const std::uint16_t, const std::uint8_t);
     void setMode(const EmgMode, const ImuMode, const ClassifierMode);
     void setSleepMode(const SleepMode);
+    void unlock(const UnlockMode);
+    void lock();
 
     std::string deviceName();
 
     void onEmg(const std::function<void(EmgSample)> &);
     void onImu(const std::function<void(OrientationSample, AccelerometerSample, GyroscopeSample)> &);
+    void onClassifierEvent(const std::function<void(ClassifierEvent)> &);
+    void onMotionEvent(const std::function<void(MotionEvent)> &);
     void listen();
 
 private:
     void enable_notifications();
+    void enable_indications();
 
     gatt::Client client;
     std::function<void(EmgSample)> emg_callback;
     std::function<void(OrientationSample, AccelerometerSample, GyroscopeSample)> imu_callback;
+    std::function<void(ClassifierEvent)> classifier_callback;
+    std::function<void(MotionEvent)> motion_callback;
 };
 
 }
